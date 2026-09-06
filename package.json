@@ -1,0 +1,15 @@
+{
+  "name": "agentforge",
+  "version": "0.1.0",
+  "description": "A minimal foundation for iterative agent design, benchmarking, evaluation, and improvement.",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "npm run build && node --test dist/tests/*.test.js",
+    "demo": "npm run build && node dist/src/demo.js"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.1",
+    "typescript": "^5.7.3"
+  }
+}
