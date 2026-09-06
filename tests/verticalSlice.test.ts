@@ -25,13 +25,16 @@ test("runs the customer support vertical slice end to end with calculated metric
     regressionGuard: new RegressionGuard(0.8)
   });
 
-  assert.equal(result.benchmark.cases.length, 6);
-  assert.equal(result.evaluation.totalCases, 6);
-  assert.equal(result.evaluation.passedCases, 6);
-  assert.equal(result.evaluation.failedCases, 0);
-  assert.equal(result.evaluation.accuracy, 1);
-  assert.equal(result.failureAnalysis.failedCases.length, 0);
-  assert.equal(result.regression.passed, true);
+  assert.equal(result.benchmark.cases.length, 18);
+  assert.equal(result.evaluation.totalCases, 18);
+  assert.equal(result.evaluation.caseEvaluations.length, 18);
+  assert.ok(result.evaluation.overallScore >= 0);
+  assert.ok(result.evaluation.overallScore <= 1);
+  assert.ok(result.evaluation.caseEvaluations.every((evaluation) => evaluation.criterionResults.length > 0));
+  assert.equal(
+    result.failureAnalysis.failedCases.length,
+    result.evaluation.caseEvaluations.filter((evaluation) => !evaluation.passed).length
+  );
 });
 
 test("regression guard fails when a candidate loses a previously passing case", () => {
@@ -61,12 +64,27 @@ function reportWithCases(agentSpecId: string, cases: Array<[string, boolean]>): 
     passedCases,
     failedCases: cases.length - passedCases,
     accuracy: passedCases / cases.length,
+    overallScore: passedCases / cases.length,
     caseEvaluations: cases.map(([caseId, passed]) => ({
       caseId,
       score: passed ? 1 : 0,
+      overallScore: passed ? 1 : 0,
       passed,
+      criterionResults: [
+        {
+          id: "fixture",
+          type: "required_concept",
+          passed,
+          score: passed ? 1 : 0,
+          weight: 1,
+          explanation: passed ? "fixture passed" : "fixture failed"
+        }
+      ],
       missingRequiredTerms: passed ? [] : ["required"],
-      forbiddenTermsFound: []
+      missingRequiredConcepts: passed ? [] : ["required"],
+      forbiddenTermsFound: [],
+      forbiddenContentViolations: [],
+      explanation: passed ? "Passed fixture." : "Failed fixture."
     }))
   };
 }

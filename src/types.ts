@@ -1,4 +1,4 @@
-export type Score = 0 | 1;
+export type Score = number;
 
 export interface Task {
   id: string;
@@ -30,10 +30,37 @@ export interface BenchmarkCase {
   id: string;
   input: string;
   expected: {
-    mustInclude: string[];
+    mustInclude?: string[];
     mustNotInclude?: string[];
+    category?: string;
+    requiredConcepts?: EvaluationConcept[];
+    forbiddenContent?: EvaluationConcept[];
+    qualityCriteria?: EvaluationCriterion[];
+    structuredFields?: ExpectedStructuredField[];
+    passThreshold?: number;
   };
   tags: string[];
+}
+
+export interface EvaluationConcept {
+  name: string;
+  aliases: string[];
+  weight?: number;
+}
+
+export interface EvaluationCriterion {
+  name: string;
+  description: string;
+  weight?: number;
+  allOf?: string[];
+  anyOf?: string[];
+}
+
+export interface ExpectedStructuredField {
+  name: string;
+  aliases?: string[];
+  required?: boolean;
+  weight?: number;
 }
 
 export interface Benchmark {
@@ -56,9 +83,25 @@ export interface AgentRun {
 export interface CaseEvaluation {
   caseId: string;
   score: Score;
+  overallScore: number;
   passed: boolean;
+  criterionResults: CriterionResult[];
   missingRequiredTerms: string[];
+  missingRequiredConcepts: string[];
   forbiddenTermsFound: string[];
+  forbiddenContentViolations: string[];
+  expectedCategory?: string;
+  detectedCategory?: string;
+  explanation: string;
+}
+
+export interface CriterionResult {
+  id: string;
+  type: "category" | "required_concept" | "forbidden_content" | "quality" | "structured_field";
+  passed: boolean;
+  score: number;
+  weight: number;
+  explanation: string;
 }
 
 export interface EvaluationReport {
@@ -68,6 +111,7 @@ export interface EvaluationReport {
   passedCases: number;
   failedCases: number;
   accuracy: number;
+  overallScore: number;
   caseEvaluations: CaseEvaluation[];
 }
 
