@@ -48,6 +48,9 @@ export interface AgentRun {
   input: string;
   output: string;
   agentSpecId: string;
+  status?: "success" | "error";
+  error?: string;
+  metadata?: Record<string, unknown>;
 }
 
 export interface CaseEvaluation {

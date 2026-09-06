@@ -13,6 +13,7 @@ export class LlmAgentDesigner implements AgentDesigner {
     try {
       const modelOutput = await this.llmProvider.generateText({
         temperature: 0.2,
+        responseFormat: "json",
         systemPrompt: [
           "You design software agent specifications.",
           "Return only a valid JSON object.",

@@ -5,6 +5,7 @@ export { KeywordEvaluator } from "./evaluator.js";
 export { RuleBasedFailureAnalyzer } from "./failureAnalyzer.js";
 export { InstructionAppendingImprover } from "./improver.js";
 export { LlmAgentDesigner } from "./llmAgentDesigner.js";
+export { LlmAgentRunner, buildSystemPrompt, buildUserPrompt } from "./llmAgentRunner.js";
 export { OpenAICompatibleLlmProvider, createLlmProviderFromEnv } from "./llmProvider.js";
 export { runAgentForgeVerticalSlice } from "./pipeline.js";
 export { RegressionGuard } from "./regressionGuard.js";

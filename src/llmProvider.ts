@@ -2,6 +2,8 @@ export interface LlmRequest {
   systemPrompt: string;
   userPrompt: string;
   temperature?: number;
+  timeoutMs?: number;
+  responseFormat?: "text" | "json";
 }
 
 export interface LlmProvider {
@@ -30,35 +32,47 @@ export class OpenAICompatibleLlmProvider implements LlmProvider {
   }
 
   async generateText(request: LlmRequest): Promise<string> {
-    const response = await fetch(`${this.baseUrl}/chat/completions`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${this.config.apiKey}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: this.config.model,
-        temperature: request.temperature ?? 0.2,
-        response_format: { type: "json_object" },
-        messages: [
-          { role: "system", content: request.systemPrompt },
-          { role: "user", content: request.userPrompt }
-        ]
-      })
-    });
+    const abortController = new AbortController();
+    const timeout = request.timeoutMs
+      ? setTimeout(() => abortController.abort(new Error(`LLM provider timed out after ${request.timeoutMs}ms`)), request.timeoutMs)
+      : undefined;
 
-    if (!response.ok) {
-      const body = await response.text();
-      throw new Error(`LLM provider request failed with ${response.status}: ${body.slice(0, 500)}`);
+    try {
+      const response = await fetch(`${this.baseUrl}/chat/completions`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${this.config.apiKey}`,
+          "Content-Type": "application/json"
+        },
+        signal: abortController.signal,
+        body: JSON.stringify({
+          model: this.config.model,
+          temperature: request.temperature ?? 0.2,
+          ...(request.responseFormat !== "text" ? { response_format: { type: "json_object" } } : {}),
+          messages: [
+            { role: "system", content: request.systemPrompt },
+            { role: "user", content: request.userPrompt }
+          ]
+        })
+      });
+
+      if (!response.ok) {
+        const body = await response.text();
+        throw new Error(`LLM provider request failed with ${response.status}: ${body.slice(0, 500)}`);
+      }
+
+      const data = (await response.json()) as ChatCompletionResponse;
+      const content = data.choices?.[0]?.message?.content;
+      if (!content) {
+        throw new Error("LLM provider response did not include message content.");
+      }
+
+      return content;
+    } finally {
+      if (timeout) {
+        clearTimeout(timeout);
+      }
     }
-
-    const data = (await response.json()) as ChatCompletionResponse;
-    const content = data.choices?.[0]?.message?.content;
-    if (!content) {
-      throw new Error("LLM provider response did not include message content.");
-    }
-
-    return content;
   }
 }
 

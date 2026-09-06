@@ -4,6 +4,7 @@ import { KeywordEvaluator } from "./evaluator.js";
 import { RuleBasedFailureAnalyzer } from "./failureAnalyzer.js";
 import { InstructionAppendingImprover } from "./improver.js";
 import { LlmAgentDesigner } from "./llmAgentDesigner.js";
+import { LlmAgentRunner } from "./llmAgentRunner.js";
 import { createLlmProviderFromEnv } from "./llmProvider.js";
 import { runAgentForgeVerticalSlice } from "./pipeline.js";
 import { RegressionGuard } from "./regressionGuard.js";
@@ -18,10 +19,12 @@ const task: Task = {
 const benchmark = createCustomerSupportBenchmark();
 const llmProvider = createLlmProviderFromEnv();
 const designer = llmProvider ? new LlmAgentDesigner(llmProvider) : new BasicAgentDesigner();
+const useLlmRunner = llmProvider && process.env.AGENTFORGE_DEMO_LLM_RUNNER === "true";
+const runner = useLlmRunner ? new LlmAgentRunner(llmProvider, { timeoutMs: 30_000 }) : new DeterministicMockAgentRunner();
 
 const result = await runAgentForgeVerticalSlice(task, benchmark, {
   designer,
-  runner: new DeterministicMockAgentRunner(),
+  runner,
   evaluator: new KeywordEvaluator(),
   failureAnalyzer: new RuleBasedFailureAnalyzer(),
   improver: new InstructionAppendingImprover(),
@@ -30,6 +33,7 @@ const result = await runAgentForgeVerticalSlice(task, benchmark, {
 
 console.log("AgentForge vertical slice demo");
 console.log(`Designer mode: ${llmProvider ? "llm" : "deterministic"}`);
+console.log(`Runner mode: ${useLlmRunner ? "llm" : "deterministic"}`);
 console.log(`Task: ${result.task.description}`);
 console.log(`AgentSpec: ${result.agentSpec.name} (${result.agentSpec.id})`);
 console.log(`Role: ${result.agentSpec.role}`);
