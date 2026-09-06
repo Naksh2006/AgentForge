@@ -129,6 +129,66 @@ export interface FailureAnalysis {
   summary: string;
 }
 
+export type FailurePatternType =
+  | "missing_required_information"
+  | "incorrect_classification"
+  | "incomplete_response"
+  | "policy_violation"
+  | "escalation_failure"
+  | "verification_failure"
+  | "structured_field_failure"
+  | "run_failure";
+
+export type FailureSeverity = "low" | "medium" | "high" | "critical";
+
+export interface FailureEvidence {
+  caseId: string;
+  criterionId: string;
+  criterionType: CriterionResult["type"];
+  explanation: string;
+  outputExcerpt: string;
+  tags: string[];
+}
+
+export interface FailurePattern {
+  patternId: string;
+  type: FailurePatternType;
+  description: string;
+  affectedCases: string[];
+  frequency: number;
+  severity: FailureSeverity;
+  supportingEvidence: FailureEvidence[];
+  failedCriteria: string[];
+}
+
+export interface RootCause {
+  hypothesis: string;
+  supportingEvidence: string[];
+  confidence: number;
+  relatedFailurePatterns: string[];
+}
+
+export interface ImprovementRecommendation {
+  recommendation: string;
+  targetAgentSpecField: keyof Pick<
+    AgentSpec,
+    "systemInstructions" | "taskInstructions" | "outputFormat" | "verificationInstructions" | "tools"
+  >;
+  reason: string;
+  supportingFailurePatterns: string[];
+  expectedEffect: string;
+}
+
+export interface FailureAnalysisReport extends FailureAnalysis {
+  agentSpecId: string;
+  benchmarkId: string;
+  totalCases: number;
+  totalFailedCases: number;
+  patterns: FailurePattern[];
+  rootCauses: RootCause[];
+  recommendations: ImprovementRecommendation[];
+}
+
 export interface ImprovementProposal {
   baseAgentSpecId: string;
   proposedAgentSpec: AgentSpec;
@@ -156,7 +216,12 @@ export interface Evaluator {
 }
 
 export interface FailureAnalyzer {
-  analyze(benchmark: Benchmark, report: EvaluationReport): FailureAnalysis;
+  analyze(
+    agentSpec: AgentSpec,
+    benchmarkCases: BenchmarkCase[],
+    runResults: AgentRun[],
+    evaluationReport: EvaluationReport
+  ): FailureAnalysisReport;
 }
 
 export interface AgentImprover {
