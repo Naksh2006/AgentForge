@@ -16,6 +16,14 @@ export interface OpenAICompatibleConfig {
   baseUrl?: string;
 }
 
+export interface LlmEnvironmentConfigStatus {
+  configured: boolean;
+  model: string;
+  baseUrl?: string;
+  apiKeySource?: "AGENTFORGE_LLM_API_KEY" | "OPENAI_API_KEY";
+  missing: string[];
+}
+
 interface ChatCompletionResponse {
   choices?: Array<{
     message?: {
@@ -47,7 +55,7 @@ export class OpenAICompatibleLlmProvider implements LlmProvider {
         signal: abortController.signal,
         body: JSON.stringify({
           model: this.config.model,
-          temperature: request.temperature ?? 0.2,
+          ...buildTemperatureParam(this.config.model, request.temperature),
           ...(request.responseFormat !== "text" ? { response_format: { type: "json_object" } } : {}),
           messages: [
             { role: "system", content: request.systemPrompt },
@@ -77,14 +85,55 @@ export class OpenAICompatibleLlmProvider implements LlmProvider {
 }
 
 export function createLlmProviderFromEnv(env: NodeJS.ProcessEnv = process.env): LlmProvider | undefined {
-  const apiKey = env.AGENTFORGE_LLM_API_KEY ?? env.OPENAI_API_KEY;
+  const configStatus = readLlmConfigFromEnv(env);
+  const apiKey = getConfiguredApiKey(env);
   if (!apiKey) {
     return undefined;
   }
 
   return new OpenAICompatibleLlmProvider({
     apiKey,
-    model: env.AGENTFORGE_LLM_MODEL ?? "gpt-4o-mini",
-    baseUrl: env.AGENTFORGE_LLM_BASE_URL
+    model: configStatus.model,
+    baseUrl: configStatus.baseUrl
   });
+}
+
+export function readLlmConfigFromEnv(env: NodeJS.ProcessEnv = process.env): LlmEnvironmentConfigStatus {
+  const apiKeySource = getConfiguredApiKeySource(env);
+  const model = env.AGENTFORGE_LLM_MODEL?.trim() || "gpt-4o-mini";
+  const baseUrl = env.AGENTFORGE_LLM_BASE_URL?.trim() || undefined;
+
+  return {
+    configured: Boolean(apiKeySource),
+    model,
+    baseUrl,
+    apiKeySource,
+    missing: apiKeySource ? [] : ["AGENTFORGE_LLM_API_KEY or OPENAI_API_KEY"]
+  };
+}
+
+function getConfiguredApiKey(env: NodeJS.ProcessEnv): string | undefined {
+  const source = getConfiguredApiKeySource(env);
+  return source ? env[source] : undefined;
+}
+
+function getConfiguredApiKeySource(env: NodeJS.ProcessEnv): "AGENTFORGE_LLM_API_KEY" | "OPENAI_API_KEY" | undefined {
+  if (env.AGENTFORGE_LLM_API_KEY?.trim()) {
+    return "AGENTFORGE_LLM_API_KEY";
+  }
+
+  if (env.OPENAI_API_KEY?.trim()) {
+    return "OPENAI_API_KEY";
+  }
+
+  return undefined;
+}
+
+function buildTemperatureParam(model: string, temperature: number | undefined): { temperature?: number } {
+  const requestedTemperature = temperature ?? 0.2;
+  if (model.startsWith("gpt-5") && requestedTemperature !== 1) {
+    return {};
+  }
+
+  return { temperature: requestedTemperature };
 }

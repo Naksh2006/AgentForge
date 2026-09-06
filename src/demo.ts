@@ -5,7 +5,7 @@ import { RuleBasedFailureAnalyzer } from "./failureAnalyzer.js";
 import { InstructionAppendingImprover } from "./improver.js";
 import { LlmAgentDesigner } from "./llmAgentDesigner.js";
 import { LlmAgentRunner } from "./llmAgentRunner.js";
-import { createLlmProviderFromEnv } from "./llmProvider.js";
+import { createLlmProviderFromEnv, readLlmConfigFromEnv } from "./llmProvider.js";
 import { runAgentForgeVerticalSlice } from "./pipeline.js";
 import { RegressionGuard } from "./regressionGuard.js";
 import { DeterministicMockAgentRunner } from "./runner.js";
@@ -17,6 +17,7 @@ const task: Task = {
 };
 
 const benchmark = createCustomerSupportBenchmark();
+const llmConfig = readLlmConfigFromEnv();
 const llmProvider = createLlmProviderFromEnv();
 const designer = llmProvider ? new LlmAgentDesigner(llmProvider) : new BasicAgentDesigner();
 const useLlmRunner = llmProvider && process.env.AGENTFORGE_DEMO_LLM_RUNNER === "true";
@@ -32,6 +33,11 @@ const result = await runAgentForgeVerticalSlice(task, benchmark, {
 });
 
 console.log("AgentForge vertical slice demo");
+console.log(
+  `LLM config: ${llmConfig.configured ? "configured" : "missing"}; model=${llmConfig.model}; keySource=${
+    llmConfig.apiKeySource ?? "none"
+  }`
+);
 console.log(`Designer mode: ${llmProvider ? "llm" : "deterministic"}`);
 console.log(`Runner mode: ${useLlmRunner ? "llm" : "deterministic"}`);
 console.log(`Task: ${result.task.description}`);
