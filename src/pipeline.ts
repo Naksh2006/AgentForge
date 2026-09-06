@@ -27,7 +27,7 @@ export async function runAgentForgeVerticalSlice(
   const agentSpec = await dependencies.designer.design(task);
   const runs = await runBenchmark(dependencies.runner, agentSpec, benchmark.cases);
   const evaluation = dependencies.evaluator.evaluate(agentSpec, benchmark, runs);
-  const failureAnalysis = dependencies.failureAnalyzer.analyze(benchmark, evaluation);
+  const failureAnalysis = dependencies.failureAnalyzer.analyze(agentSpec, benchmark.cases, runs, evaluation);
   const improvement = await dependencies.improver.proposeImprovement(agentSpec, failureAnalysis);
   const candidateRuns = await runBenchmark(dependencies.runner, improvement.proposedAgentSpec, benchmark.cases);
   const candidateEvaluation = dependencies.evaluator.evaluate(improvement.proposedAgentSpec, benchmark, candidateRuns);

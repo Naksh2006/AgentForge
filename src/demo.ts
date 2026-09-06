@@ -21,6 +21,7 @@ const llmConfig = readLlmConfigFromEnv();
 const llmProvider = createLlmProviderFromEnv();
 const designer = llmProvider ? new LlmAgentDesigner(llmProvider) : new BasicAgentDesigner();
 const useLlmRunner = llmProvider && process.env.AGENTFORGE_DEMO_LLM_RUNNER === "true";
+const printFailureAnalysis = process.env.AGENTFORGE_DEMO_FAILURE_ANALYSIS === "true";
 const runner = useLlmRunner ? new LlmAgentRunner(llmProvider, { timeoutMs: 30_000 }) : new DeterministicMockAgentRunner();
 
 const result = await runAgentForgeVerticalSlice(task, benchmark, {
@@ -60,6 +61,35 @@ console.log(
   )}%)`
 );
 console.log(`Failure analysis: ${result.failureAnalysis.summary}`);
+if (printFailureAnalysis) {
+  console.log("");
+  console.log("Failure Patterns:");
+  for (const pattern of result.failureAnalysis.patterns) {
+    console.log(
+      `- ${pattern.patternId}: ${pattern.description} severity=${pattern.severity}; cases=[${pattern.affectedCases.join(
+        ", "
+      )}]`
+    );
+  }
+
+  console.log("");
+  console.log("Root Causes:");
+  for (const rootCause of result.failureAnalysis.rootCauses) {
+    console.log(
+      `- ${rootCause.hypothesis} confidence=${rootCause.confidence}; patterns=[${rootCause.relatedFailurePatterns.join(
+        ", "
+      )}]`
+    );
+  }
+
+  console.log("");
+  console.log("Recommendations:");
+  for (const recommendation of result.failureAnalysis.recommendations) {
+    console.log(
+      `- ${recommendation.targetAgentSpecField}: ${recommendation.recommendation} Expected effect: ${recommendation.expectedEffect}`
+    );
+  }
+}
 console.log(`Improvement proposal: ${result.improvement.rationale.join(" ")}`);
 console.log(
   `Regression guard: ${result.regression.passed ? "PASS" : "FAIL"} (baseline ${Math.round(
